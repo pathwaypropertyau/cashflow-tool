@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pathway Property — Cashflow Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f1ea;
+    --bg-card: #fffcf6;
+    --ink: #1a2620;
+    --ink-soft: #4a5751;
+    --ink-faint: #8a948f;
+    --rule: #d9d2c4;
+    --rule-soft: #ebe5d7;
+    --accent: #2a4f3d;
+    --accent-soft: #e8efe9;
+    --positive: #2a6648;
+    --negative: #a4422c;
+    --warn: #b8814a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(42, 79, 61, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(168, 121, 74, 0.04) 0%, transparent 50%);
+    padding: 24px 16px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  @media (min-width: 900px) {
+    .container { grid-template-columns: 1.2fr 1fr; }
+  }
+
+  header {
+    grid-column: 1 / -1;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .brand .accent {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+  }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .panel-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.005em;
+    margin-bottom: 4px;
+  }
+  .panel-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+    margin-bottom: 20px;
+  }
+
+  .section {
+    padding: 16px 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .section:first-of-type { padding-top: 0; border-top: none; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  .field-grid.full { grid-template-columns: 1fr; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .field .hint {
+    font-size: 10px;
+    color: var(--ink-faint);
+    font-style: italic;
+    margin-top: 1px;
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-prefix, .input-suffix {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+  .input-prefix { left: 10px; }
+  .input-suffix { right: 10px; }
+
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  input.with-prefix { padding-left: 24px; }
+  input.with-suffix { padding-right: 28px; }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-card);
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  .radio-group {
+    display: flex;
+    gap: 0;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .radio-group label {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+    border-right: 1px solid var(--rule);
+  }
+  .radio-group label:last-child { border-right: none; }
+  .radio-group input[type="radio"] { display: none; }
+  .radio-group input[type="radio"]:checked + label {
+    background: var(--accent);
+    color: var(--bg-card);
+    font-weight: 600;
+  }
+
+  /* Results */
+  .results-panel {
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+
+  .headline {
+    background: var(--ink);
+    color: var(--bg-card);
+    padding: 24px;
+    border-radius: 4px 4px 0 0;
+    margin: -24px -24px 0 -24px;
+  }
+  .headline-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255, 252, 246, 0.6);
+    margin-bottom: 8px;
+  }
+  .headline-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 42px;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.05;
+  }
+  .headline-value.positive { color: #8fc9a4; }
+  .headline-value.negative { color: #d99a86; }
+  .headline-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255, 252, 246, 0.7);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--rule-soft);
+    margin: 24px -24px -24px -24px;
+    border-top: 1px solid var(--rule);
+  }
+  .metric {
+    background: var(--bg-card);
+    padding: 16px 18px;
+  }
+  .metric-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .metric-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .metric-value.positive { color: var(--positive); }
+  .metric-value.negative { color: var(--negative); }
+  .metric-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-faint);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .breakdown {
+    padding: 20px 24px 4px 24px;
+    margin: 0 -24px;
+    border-top: 1px solid var(--rule);
+  }
+  .breakdown-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+    border-bottom: 1px dotted var(--rule-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .breakdown-row:last-of-type { border-bottom: none; }
+  .breakdown-row .label { color: var(--ink-soft); }
+  .breakdown-row .value {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .breakdown-row.subtotal {
+    border-top: 1px solid var(--rule);
+    border-bottom: none;
+    padding-top: 8px;
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .breakdown-row.subtotal .value {
+    font-weight: 600;
+  }
+
+  footer {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding-top: 12px;
+    color: var(--ink-faint);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 14px;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .btn:hover {
+    background: var(--accent);
+    color: var(--bg-card);
+    border-color: var(--accent);
+  }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--bg-card);
+    border-color: var(--accent);
+  }
+  .btn.primary:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="brand">Pathway Property <span class="accent">— Cashflow</span></div>
+        <div class="tagline">Investment Property Modelling</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="resetDefaults()">Reset</button>
+        <button class="btn" onclick="copyLink()">Share Scenario</button>
+        <button class="btn primary" onclick="window.print()">Print / PDF</button>
+      </div>
+    </header>
+
+    <!-- INPUTS -->
+    <div class="panel">
+      <div class="panel-title">Inputs</div>
+      <div class="panel-subtitle">All figures in AUD · annual unless noted</div>
+
+      <!-- ACQUISITION -->
+      <div class="section">
+        <div class="section-label">Acquisition</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="purchasePrice">Purchase Price</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="purchasePrice" class="with-prefix" value="650000" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="state">State (stamp duty estimate)</label>
+            <select id="state">
+              <option value="VIC">VIC</option>
+              <option value="NSW">NSW</option>
+              <option value="QLD">QLD</option>
+              <option value="SA">SA</option>
+              <option value="WA">WA</option>
+              <option value="ACT">ACT</option>
+              <option value="TAS">TAS</option>
+              <option value="NT">NT</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="stampDuty">Stamp Duty <span class="hint">(auto-estimated, override if needed)</span></label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="stampDuty" class="with-prefix" value="0" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="otherCosts">Other Acquisition Costs <span class="hint">(legal, B&P, etc.)</span></label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="otherCosts" class="with-prefix" value="3500" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOAN -->
+      <div class="section">
+        <div class="section-label">Loan</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="lvr">Loan-to-Value Ratio</label>
+            <div class="input-wrap">
+              <input type="number" id="lvr" class="with-suffix" value="80" step="0.5" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="interestRate">Interest Rate</label>
+            <div class="input-wrap">
+              <input type="number" id="interestRate" class="with-suffix" value="6.50" step="0.05" />
+              <span class="input-suffix">% p.a.</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="loanTerm">Loan Term</label>
+            <div class="input-wrap">
+              <input type="number" id="loanTerm" class="with-suffix" value="30" />
+              <span class="input-suffix">years</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Loan Type</label>
+            <div class="radio-group">
+              <input type="radio" name="loanType" id="loanIO" value="IO" />
+              <label for="loanIO">Interest Only</label>
+              <input type="radio" name="loanType" id="loanPI" value="PI" checked />
+              <label for="loanPI">Principal &amp; Interest</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INCOME -->
+      <div class="section">
+        <div class="section-label">Income</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="rentPerWeek">Rent Per Week</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="rentPerWeek" class="with-prefix" value="540" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="vacancy">Vacancy Rate <span class="hint">(default 2 weeks/year ≈ 4%)</span></label>
+            <div class="input-wrap">
+              <input type="number" id="vacancy" class="with-suffix" value="4" step="0.5" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOLDING COSTS -->
+      <div class="section">
+        <div class="section-label">Annual Holding Costs</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="pmFee">PM Fee</label>
+            <div class="input-wrap">
+              <input type="number" id="pmFee" class="with-suffix" value="7" step="0.1" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="ratesWater">Rates + Water</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="ratesWater" class="with-prefix" value="2800" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="insurance">Insurance (Landlord + Building)</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="insurance" class="with-prefix" value="1800" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="maintenance">Maintenance Buffer</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="maintenance" class="with-prefix" value="2000" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="landTax">Land Tax</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="landTax" class="with-prefix" value="0" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="strata">Body Corporate / Strata <span class="hint">(if applicable)</span></label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="strata" class="with-prefix" value="0" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="panel results-panel">
+      <div class="headline">
+        <div class="headline-label">Net Annual Cashflow (Pre-Tax)</div>
+        <div class="headline-value" id="netAnnual">$0</div>
+        <div class="headline-sub" id="netWeekly">$0 / week</div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Gross Yield</div>
+          <div class="metric-value" id="grossYield">0.00%</div>
+          <div class="metric-sub">Rent / Purchase Price</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Net Yield</div>
+          <div class="metric-value" id="netYield">0.00%</div>
+          <div class="metric-sub">After all costs</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Cash Required at Settlement</div>
+          <div class="metric-value" id="cashRequired">$0</div>
+          <div class="metric-sub">Deposit + costs</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Cash-on-Cash Return</div>
+          <div class="metric-value" id="cashOnCash">0.00%</div>
+          <div class="metric-sub">Cashflow / cash in</div>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-title">Income</div>
+        <div class="breakdown-row"><span class="label">Gross Annual Rent</span><span class="value" id="grossRent">$0</span></div>
+        <div class="breakdown-row"><span class="label">Less: Vacancy</span><span class="value" id="vacancyCost">$0</span></div>
+        <div class="breakdown-row"><span class="label">Less: PM Fee</span><span class="value" id="pmCost">$0</span></div>
+        <div class="breakdown-row subtotal"><span class="label">Effective Rent</span><span class="value" id="effectiveRent">$0</span></div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-title">Expenses</div>
+        <div class="breakdown-row"><span class="label">Annual Loan Cost</span><span class="value" id="loanCost">$0</span></div>
+        <div class="breakdown-row"><span class="label">Rates + Water</span><span class="value" id="ratesWaterOut">$0</span></div>
+        <div class="breakdown-row"><span class="label">Insurance</span><span class="value" id="insuranceOut">$0</span></div>
+        <div class="breakdown-row"><span class="label">Maintenance Buffer</span><span class="value" id="maintenanceOut">$0</span></div>
+        <div class="breakdown-row"><span class="label">Land Tax</span><span class="value" id="landTaxOut">$0</span></div>
+        <div class="breakdown-row"><span class="label">Body Corp / Strata</span><span class="value" id="strataOut">$0</span></div>
+        <div class="breakdown-row subtotal"><span class="label">Total Annual Costs</span><span class="value" id="totalCosts">$0</span></div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-title">Loan Detail</div>
+        <div class="breakdown-row"><span class="label">Loan Amount</span><span class="value" id="loanAmount">$0</span></div>
+        <div class="breakdown-row"><span class="label">Deposit Required</span><span class="value" id="deposit">$0</span></div>
+        <div class="breakdown-row"><span class="label">Monthly Repayment</span><span class="value" id="monthlyRepay">$0</span></div>
+        <div class="breakdown-row"><span class="label">Weekly Repayment</span><span class="value" id="weeklyRepay">$0</span></div>
+      </div>
+    </div>
+
+    <footer>
+      Pathway Property · Estimates only. Verify all costs against contract, lender quote &amp; state revenue office.
+    </footer>
+  </div>
+
+<script>
+  // --- Stamp duty estimators (investment, owner-non-occupier, AU 2025-26 rates) ---
+  // Source: State Revenue Office published rates. Rounded approximations for non-PPOR transfers.
+  function stampDuty(price, state) {
+    const p = Number(price) || 0;
+    if (p <= 0) return 0;
+    switch (state) {
+      case 'VIC': // dutiable property, general rate
+        if (p <= 25000) return p * 0.014;
+        if (p <= 130000) return 350 + (p - 25000) * 0.024;
+        if (p <= 960000) return 2870 + (p - 130000) * 0.06;
+        if (p <= 2000000) return 52930 + (p - 960000) * 0.055;
+        return 110000 + (p - 2000000) * 0.065;
+      case 'NSW': // general transfer duty
+        if (p <= 16000) return p * 0.0125;
+        if (p <= 35000) return 200 + (p - 16000) * 0.015;
+        if (p <= 93000) return 485 + (p - 35000) * 0.0175;
+        if (p <= 351000) return 1500 + (p - 93000) * 0.035;
+        if (p <= 1168000) return 10530 + (p - 351000) * 0.045;
+        if (p <= 3505000) return 47295 + (p - 1168000) * 0.055;
+        return 175820 + (p - 3505000) * 0.07;
+      case 'QLD': // transfer duty, non-home rate
+        if (p <= 5000) return 0;
+        if (p <= 75000) return (p - 5000) * 0.015;
+        if (p <= 540000) return 1050 + (p - 75000) * 0.035;
+        if (p <= 1000000) return 17325 + (p - 540000) * 0.045;
+        return 38025 + (p - 1000000) * 0.0575;
+      case 'SA':
+        if (p <= 12000) return p * 0.01;
+        if (p <= 30000) return 120 + (p - 12000) * 0.02;
+        if (p <= 50000) return 480 + (p - 30000) * 0.03;
+        if (p <= 100000) return 1080 + (p - 50000) * 0.035;
+        if (p <= 200000) return 2830 + (p - 100000) * 0.04;
+        if (p <= 250000) return 6830 + (p - 200000) * 0.0425;
+        if (p <= 300000) return 8955 + (p - 250000) * 0.0475;
+        if (p <= 500000) return 11330 + (p - 300000) * 0.05;
+        return 21330 + (p - 500000) * 0.055;
+      case 'WA':
+        if (p <= 120000) return p * 0.019;
+        if (p <= 150000) return 2280 + (p - 120000) * 0.0285;
+        if (p <= 360000) return 3135 + (p - 150000) * 0.038;
+        if (p <= 725000) return 11115 + (p - 360000) * 0.0475;
+        return 28453 + (p - 725000) * 0.0515;
+      case 'ACT':
+        if (p <= 260000) return Math.max(20, p * 0.0049);
+        if (p <= 300000) return 1274 + (p - 260000) * 0.022;
+        if (p <= 500000) return 2154 + (p - 300000) * 0.034;
+        if (p <= 750000) return 8934 + (p - 500000) * 0.0432;
+        if (p <= 1000000) return 19734 + (p - 750000) * 0.059;
+        if (p <= 1455000) return 34484 + (p - 1000000) * 0.0654;
+        return p * 0.046;
+      case 'TAS':
+        if (p <= 3000) return 50;
+        if (p <= 25000) return 50 + (p - 3000) * 0.0175;
+        if (p <= 75000) return 435 + (p - 25000) * 0.0225;
+        if (p <= 200000) return 1560 + (p - 75000) * 0.035;
+        if (p <= 375000) return 5935 + (p - 200000) * 0.04;
+        if (p <= 725000) return 12935 + (p - 375000) * 0.0425;
+        return 27810 + (p - 725000) * 0.045;
+      case 'NT':
+        // simplified - NT uses a complex formula below $525k, flat tiered above
+        if (p <= 525000) return (0.06571441 * Math.pow(p / 1000, 2)) + 15 * (p / 1000);
+        if (p <= 3000000) return p * 0.0495;
+        if (p <= 5000000) return p * 0.0575;
+        return p * 0.0595;
+      default: return 0;
+    }
+  }
+
+  function fmt(n, opts = {}) {
+    const v = Number(n);
+    if (isNaN(v)) return '—';
+    const rounded = Math.round(v);
+    return (rounded < 0 ? '-$' : '$') + Math.abs(rounded).toLocaleString('en-AU');
+  }
+  function fmtPct(n) {
+    const v = Number(n);
+    if (isNaN(v) || !isFinite(v)) return '—';
+    return v.toFixed(2) + '%';
+  }
+
+  // P&I monthly payment (amortising)
+  function pmt(principal, ratePA, years) {
+    if (years <= 0 || principal <= 0) return 0;
+    const r = ratePA / 12;
+    const n = years * 12;
+    if (r === 0) return principal / n;
+    return principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+  }
+
+  function get(id) { return parseFloat(document.getElementById(id).value) || 0; }
+  function loanType() {
+    return document.querySelector('input[name="loanType"]:checked').value;
+  }
+
+  function recalc() {
+    const price = get('purchasePrice');
+    const state = document.getElementById('state').value;
+
+    // Auto-update stamp duty whenever price or state changes — but allow manual override
+    // We use a hidden flag to know if user has manually edited stamp duty
+    if (!stampDutyOverridden) {
+      document.getElementById('stampDuty').value = Math.round(stampDuty(price, state));
+    }
+
+    const stamp = get('stampDuty');
+    const other = get('otherCosts');
+    const lvr = get('lvr') / 100;
+    const rate = get('interestRate') / 100;
+    const term = get('loanTerm');
+    const lt = loanType();
+
+    const rentPW = get('rentPerWeek');
+    const vacancyPct = get('vacancy') / 100;
+    const pmPct = get('pmFee') / 100;
+
+    const rates = get('ratesWater');
+    const ins = get('insurance');
+    const maint = get('maintenance');
+    const land = get('landTax');
+    const strata = get('strata');
+
+    // Loan
+    const loan = price * lvr;
+    const deposit = price - loan;
+    const cashRequired = deposit + stamp + other;
+    const monthly = lt === 'IO' ? (loan * rate / 12) : pmt(loan, rate, term);
+    const weekly = monthly * 12 / 52;
+    const annualLoan = monthly * 12;
+
+    // Income
+    const grossRent = rentPW * 52;
+    const vacancyCost = grossRent * vacancyPct;
+    const pmCost = (grossRent - vacancyCost) * pmPct;
+    const effectiveRent = grossRent - vacancyCost - pmCost;
+
+    // Expenses
+    const totalCosts = annualLoan + rates + ins + maint + land + strata;
+
+    // Bottom line
+    const netAnnual = effectiveRent - totalCosts;
+    const netWeeklyCF = netAnnual / 52;
+
+    // Yields
+    const grossYield = price > 0 ? (grossRent / price) * 100 : 0;
+    // Net Yield (on purchase price, before financing — common AU metric)
+    const netYield = price > 0 ? ((effectiveRent - rates - ins - maint - land - strata) / price) * 100 : 0;
+    const cashOnCash = cashRequired > 0 ? (netAnnual / cashRequired) * 100 : 0;
+
+    // Write outputs
+    const netAnnualEl = document.getElementById('netAnnual');
+    const netWeeklyEl = document.getElementById('netWeekly');
+    netAnnualEl.textContent = fmt(netAnnual);
+    netWeeklyEl.textContent = fmt(netWeeklyCF) + ' / week';
+    netAnnualEl.classList.toggle('positive', netAnnual >= 0);
+    netAnnualEl.classList.toggle('negative', netAnnual < 0);
+
+    document.getElementById('grossYield').textContent = fmtPct(grossYield);
+    document.getElementById('netYield').textContent = fmtPct(netYield);
+    document.getElementById('cashRequired').textContent = fmt(cashRequired);
+    const cocEl = document.getElementById('cashOnCash');
+    cocEl.textContent = fmtPct(cashOnCash);
+    cocEl.classList.toggle('positive', cashOnCash >= 0);
+    cocEl.classList.toggle('negative', cashOnCash < 0);
+
+    document.getElementById('grossRent').textContent = fmt(grossRent);
+    document.getElementById('vacancyCost').textContent = '-' + fmt(vacancyCost);
+    document.getElementById('pmCost').textContent = '-' + fmt(pmCost);
+    document.getElementById('effectiveRent').textContent = fmt(effectiveRent);
+
+    document.getElementById('loanCost').textContent = fmt(annualLoan);
+    document.getElementById('ratesWaterOut').textContent = fmt(rates);
+    document.getElementById('insuranceOut').textContent = fmt(ins);
+    document.getElementById('maintenanceOut').textContent = fmt(maint);
+    document.getElementById('landTaxOut').textContent = fmt(land);
+    document.getElementById('strataOut').textContent = fmt(strata);
+    document.getElementById('totalCosts').textContent = fmt(totalCosts);
+
+    document.getElementById('loanAmount').textContent = fmt(loan);
+    document.getElementById('deposit').textContent = fmt(deposit);
+    document.getElementById('monthlyRepay').textContent = fmt(monthly);
+    document.getElementById('weeklyRepay').textContent = fmt(weekly);
+
+    // Sync URL for sharing
+    syncURL();
+  }
+
+  // Stamp duty manual override detection
+  let stampDutyOverridden = false;
+  document.getElementById('stampDuty').addEventListener('input', () => {
+    stampDutyOverridden = true;
+  });
+  document.getElementById('purchasePrice').addEventListener('input', () => {
+    // Reset override on price change so SD auto-recalculates
+    stampDutyOverridden = false;
+  });
+  document.getElementById('state').addEventListener('change', () => {
+    stampDutyOverridden = false;
+  });
+
+  // URL state (allows team to share / bookmark a scenario)
+  const FIELDS = ['purchasePrice', 'state', 'stampDuty', 'otherCosts', 'lvr', 'interestRate', 'loanTerm', 'rentPerWeek', 'vacancy', 'pmFee', 'ratesWater', 'insurance', 'maintenance', 'landTax', 'strata'];
+
+  function syncURL() {
+    const params = new URLSearchParams();
+    FIELDS.forEach(f => {
+      const el = document.getElementById(f);
+      if (el && el.value) params.set(f, el.value);
+    });
+    params.set('lt', loanType());
+    history.replaceState(null, '', '?' + params.toString());
+  }
+
+  function loadFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.toString() === '') return;
+    FIELDS.forEach(f => {
+      if (params.has(f)) {
+        const el = document.getElementById(f);
+        if (el) el.value = params.get(f);
+      }
+    });
+    if (params.has('lt')) {
+      const lt = params.get('lt');
+      const el = document.getElementById(lt === 'IO' ? 'loanIO' : 'loanPI');
+      if (el) el.checked = true;
+    }
+    // If stamp duty was in URL, treat as override
+    if (params.has('stampDuty')) stampDutyOverridden = true;
+  }
+
+  function copyLink() {
+    syncURL();
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  function resetDefaults() {
+    if (!confirm('Reset all inputs to defaults?')) return;
+    document.getElementById('purchasePrice').value = 650000;
+    document.getElementById('state').value = 'VIC';
+    stampDutyOverridden = false;
+    document.getElementById('otherCosts').value = 3500;
+    document.getElementById('lvr').value = 80;
+    document.getElementById('interestRate').value = 6.50;
+    document.getElementById('loanTerm').value = 30;
+    document.getElementById('loanPI').checked = true;
+    document.getElementById('rentPerWeek').value = 540;
+    document.getElementById('vacancy').value = 4;
+    document.getElementById('pmFee').value = 7;
+    document.getElementById('ratesWater').value = 2800;
+    document.getElementById('insurance').value = 1800;
+    document.getElementById('maintenance').value = 2000;
+    document.getElementById('landTax').value = 0;
+    document.getElementById('strata').value = 0;
+    history.replaceState(null, '', window.location.pathname);
+    recalc();
+  }
+
+  // Wire all inputs to live recalc
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', recalc);
+    el.addEventListener('change', recalc);
+  });
+
+  // Init
+  loadFromURL();
+  recalc();
+</script>
+</body>
+</html>
