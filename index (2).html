@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pathway Property — Cashflow Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!--
+  Pathway Property — Cashflow Calculator
+  Designed for embedding inside Notion via /embed.
+  Self-contained: HTML + CSS + JS in one file. Google Fonts only.
+
+  HOW TO EDIT LATER
+  =================
+  - Default input values: see resetDefaults() at the bottom of the <script>
+    and the matching `value="..."` attributes on each <input>.
+  - Field labels: edit the <label> text in the markup.
+  - Brand tokens (colour + font): see :root in the <style> block.
+  - Calc maths: see recalc() — preserved unchanged from v2.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,ital,wght@9..144,1,300;9..144,1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* =====================================================================
+     BRAND TOKENS — copy of the Pathway Property design system, scoped to
+     what this widget needs. Keep names matching the brand sheet.
+     ===================================================================== */
+  :root {
+    /* Teal family */
+    --pp-teal-900: #0B3A3A;
+    --pp-teal-800: #114848;
+    --pp-teal-700: #1A5A57;
+    --pp-teal-600: #256C68;
+    --pp-teal-500: #2F807C;
+    --pp-teal-300: #7FB9B5;
+    --pp-teal-200: #B4D6D3;
+    --pp-teal-100: #DBE9E7;
+    --pp-teal-50:  #EEF4F3;
+
+    /* Cream + ink */
+    --pp-cream:    #F3EFE6;
+    --pp-cream-2:  #EAE4D6;
+    --pp-cream-3:  #D9D0BD;
+    --pp-surface:  #FFFFFF;
+    --pp-ink:      #0E1A1A;
+    --pp-ink-2:    #2A3838;
+    --pp-ink-3:    #5A6A6A;
+    --pp-ink-4:    #8A9898;
+    --pp-line:     #D9E1DF;
+    --pp-line-2:   #EAEEEC;
+
+    /* Status */
+    --pp-success: #3E8A6E;
+    --pp-danger:  #B8504A;
+
+    /* On-dark headline tones */
+    --pp-pos-on-dark: #9CD4C8;   /* mint-teal — positive number on teal-900 */
+    --pp-neg-on-dark: #E8A99E;   /* warm clay — negative on teal-900 */
+
+    /* Typography */
+    --font-display:   'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    --font-body:      'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    --font-editorial: 'Fraunces', Georgia, serif;
+    --font-mono:      'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--pp-cream);
+    color: var(--pp-ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    /* The widget itself sits inside .calc; this gives a tiny breathing
+       margin when opened standalone in a browser. Inside Notion the
+       iframe controls its own padding, so this is mostly invisible. */
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  /* =====================================================================
+     CALCULATOR ROOT
+     A container query context — every breakpoint below is keyed to the
+     calc's own width, not the viewport. This is the magic that lets it
+     behave equally well at 400px (two-column Notion) and 1200px (full).
+     ===================================================================== */
+  .calc {
+    container-type: inline-size;
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--pp-cream);
+    color: var(--pp-ink);
+  }
+
+  /* ---------------------------------------------------------------------
+     HEADER — small, intentional. Logo mark + wordmark, then actions.
+     --------------------------------------------------------------------- */
+  .pp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--pp-line);
+    flex-wrap: wrap;
+  }
+
+  .pp-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* Inline-SVG logo mark — recreated from the brand mark
+     (rounded square + negative-space curve). */
+  .pp-logo {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    background: var(--pp-teal-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .pp-logo svg { width: 100%; height: 100%; display: block; }
+
+  .pp-wordmark {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    min-width: 0;
+  }
+  .pp-wordmark .name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.015em;
+    color: var(--pp-ink);
+  }
+  .pp-wordmark .role {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-teal-700);
+    margin-top: 3px;
+  }
+
+  .pp-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Buttons — quiet, technical, low-chrome. Primary uses the teal. */
+  .btn {
+    appearance: none;
+    border: 1px solid var(--pp-line);
+    background: var(--pp-surface);
+    color: var(--pp-ink-2);
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 150ms var(--ease-out), color 150ms var(--ease-out),
+                border-color 150ms var(--ease-out);
+    white-space: nowrap;
+  }
+  .btn:hover {
+    border-color: var(--pp-teal-700);
+    color: var(--pp-teal-700);
+  }
+  .btn.primary {
+    background: var(--pp-teal-700);
+    color: var(--pp-cream);
+    border-color: var(--pp-teal-700);
+  }
+  .btn.primary:hover {
+    background: var(--pp-teal-800);
+    border-color: var(--pp-teal-800);
+    color: var(--pp-cream);
+  }
+  .btn:active { transform: translateY(1px); }
+
+  /* ---------------------------------------------------------------------
+     HEADLINE RESULT — the hero of this calculator. Sits above the fold
+     in Notion's default ~500px embed height.
+     --------------------------------------------------------------------- */
+  .headline {
+    background: var(--pp-teal-900);
+    /* Subtle radial wash — evokes the brand's "liquid teal" texture
+       without needing an external image. */
+    background-image:
+      radial-gradient(ellipse 80% 60% at 80% 0%, rgba(127, 185, 181, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 0% 100%, rgba(127, 185, 181, 0.10) 0%, transparent 55%),
+      linear-gradient(135deg, #0F3E3A 0%, #0B3A3A 60%, #0F4543 100%);
+    color: var(--pp-cream);
+    border-radius: 16px;
+    padding: 22px 26px 24px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  /* A thin hairline under the texture, to echo the brand's editorial rules. */
+  .headline::after {
+    content: '';
+    position: absolute;
+    left: 26px; right: 26px; bottom: 60px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(243, 239, 230, 0.12), transparent);
+  }
+
+  .headline-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .headline-eyebrow {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pp-teal-300);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .headline-eyebrow::before {
+    content: '';
+    width: 22px;
+    height: 1px;
+    background: var(--pp-teal-300);
+  }
+
+  .headline-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(40px, 7cqw, 56px);
+    letter-spacing: -0.025em;
+    line-height: 0.98;
+    font-variant-numeric: tabular-nums;
+    /* Default — overridden by .positive / .negative */
+    color: var(--pp-pos-on-dark);
+    transition: color 200ms var(--ease-out);
+  }
+  .headline-value.positive { color: var(--pp-pos-on-dark); }
+  .headline-value.negative { color: rgb(244, 239, 230); }
+
+  .headline-sub {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(243, 239, 230, 0.72);
+    margin-top: 14px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  /* Cashflow trio — Annual (hero) + Monthly + Weekly. */
+  .cashflows { min-width: 0; }
+  .cf-lbl {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-teal-300);
+    margin-bottom: 6px;
+  }
+  .cf-sub-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 16px;
+  }
+  .cf-val {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--pp-pos-on-dark);
+    transition: color 200ms var(--ease-out);
+  }
+  .cf-val.positive { color: var(--pp-pos-on-dark); }
+  .cf-val.negative { color: rgb(244, 239, 230); }
+
+  /* Inline yield chips on the right of the headline.
+     Stacks below the cashflow value on narrow widths. */
+  .yields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    min-width: 220px;
+    align-self: flex-end;
+  }
+  .yield {
+    border-left: 1px solid rgba(243, 239, 230, 0.18);
+    padding: 2px 0 2px 14px;
+  }
+  .yield .lbl {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-teal-300);
+    margin-bottom: 6px;
+    white-space: nowrap;
+  }
+  .yield .val {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--pp-cream);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .yield .note {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: rgba(243, 239, 230, 0.55);
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ---------------------------------------------------------------------
+     BODY — two-column grid (inputs | breakdowns). Falls back to a single
+     column under 720px via container queries.
+     --------------------------------------------------------------------- */
+  .body-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @container (min-width: 720px) {
+    .body-grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+  }
+
+  /* Panels — flat surface cards with quiet hairline borders. */
+  .panel {
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .panel-head {
+    margin-bottom: 14px;
+  }
+  .panel-eyebrow {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pp-teal-700);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-eyebrow::before {
+    content: '';
+    width: 14px; height: 1px;
+    background: var(--pp-teal-700);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--pp-ink);
+    margin-top: 6px;
+  }
+  .panel-title em {
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--pp-teal-700);
+  }
+  .panel-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--pp-ink-4);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Section within a panel — labelled groups of inputs/rows. */
+  .section {
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid var(--pp-line-2);
+  }
+  .section:first-of-type {
+    padding-top: 0;
+    margin-top: 0;
+    border-top: none;
+  }
+  .section-label {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-ink-3);
+    margin-bottom: 12px;
+  }
+
+  /* ---------------------------------------------------------------------
+     INPUTS
+     --------------------------------------------------------------------- */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @container (min-width: 480px) {
+    .field-grid { grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  }
+  .field.full { grid-column: 1 / -1; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .field label {
+    font-family: var(--font-display);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pp-ink-2);
+    letter-spacing: 0;
+  }
+  .field label .hint {
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--pp-ink-4);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-prefix, .input-suffix {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--pp-ink-4);
+    pointer-events: none;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .input-prefix { left: 12px; }
+  .input-suffix { right: 12px; }
+
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--pp-line);
+    border-radius: 8px;
+    background: var(--pp-surface);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pp-ink);
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out),
+                box-shadow 150ms var(--ease-out);
+    font-variant-numeric: tabular-nums;
+  }
+  input.with-prefix { padding-left: 24px; }
+  input.with-suffix { padding-right: 64px; }
+  input:hover { border-color: var(--pp-teal-300); }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--pp-teal-700);
+    background: var(--pp-surface);
+    box-shadow: 0 0 0 3px rgba(26, 90, 87, 0.10);
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  /* Segmented control for Finance Structure. Two-up, full-width within the field. */
+  .radio-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--pp-cream);
+    border: 1px solid var(--pp-line);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+    height: 40px;
+  }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--pp-ink-3);
+    transition: background 150ms var(--ease-out), color 150ms var(--ease-out);
+    border-radius: 5px;
+    user-select: none;
+    text-align: center;
+    line-height: 1.1;
+  }
+  .radio-group label:hover { color: var(--pp-ink); }
+  .radio-group input[type="radio"] { display: none; }
+  .radio-group input[type="radio"]:checked + label {
+    background: var(--pp-teal-700);
+    color: var(--pp-cream);
+  }
+
+  /* ---------------------------------------------------------------------
+     BREAKDOWN ROWS — Income / Expenses / Finance Detail
+     --------------------------------------------------------------------- */
+  .breakdown + .breakdown { margin-top: 18px; }
+
+  .breakdown-rows { display: flex; flex-direction: column; }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 13.5px;
+    border-bottom: 1px dashed var(--pp-line);
+  }
+  .breakdown-row:last-of-type { border-bottom: none; }
+  .breakdown-row .label {
+    color: var(--pp-ink-2);
+    font-weight: 400;
+  }
+  .breakdown-row .value {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--pp-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .breakdown-row.subtotal {
+    border-top: 1px solid var(--pp-line);
+    border-bottom: none;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .breakdown-row.subtotal .label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--pp-ink);
+    font-size: 13.5px;
+  }
+  .breakdown-row.subtotal .value {
+    font-weight: 600;
+    color: var(--pp-ink);
+    font-size: 14px;
+  }
+
+  /* ---------------------------------------------------------------------
+     FOOTER
+     --------------------------------------------------------------------- */
+  .pp-foot {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--pp-line);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-ink-4);
+  }
+  .pp-foot em {
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+    color: var(--pp-teal-700);
+  }
+
+  /* ---------------------------------------------------------------------
+     COPY-FEEDBACK TOAST — appears briefly after Share Scenario.
+     --------------------------------------------------------------------- */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--pp-ink);
+    color: var(--pp-cream);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 10px 18px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+    z-index: 50;
+    box-shadow: 0 8px 24px rgba(11, 58, 58, 0.18);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ---------------------------------------------------------------------
+     NARROW-WIDTH ADJUSTMENTS — when Notion gives us <500px (mobile or
+     two-column layout), shrink the headline and stack the yields.
+     --------------------------------------------------------------------- */
+  @container (max-width: 520px) {
+    .headline { padding: 18px 18px 20px; }
+    .headline-top { gap: 14px; }
+    .yields {
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      gap: 0;
+      min-width: 0;
+    }
+    .yield { padding-left: 12px; }
+    .yield:first-child { border-left: none; padding-left: 0; }
+    .panel { padding: 16px; }
+  }
+  @container (max-width: 380px) {
+    .pp-head { gap: 10px; }
+    .pp-wordmark .name { font-size: 14px; }
+    .btn { padding: 7px 10px; font-size: 11px; letter-spacing: 0.1em; }
+    .headline-value { font-size: 36px; }
+  }
+
+  /* ---------------------------------------------------------------------
+     PRINT — neutral, single-column, no dark cards (saves ink).
+     --------------------------------------------------------------------- */
+  @media print {
+    body { background: white; padding: 0; }
+    .calc { max-width: none; }
+    .pp-actions { display: none; }
+    .headline {
+      background: white !important;
+      color: var(--pp-ink) !important;
+      border: 1px solid var(--pp-line);
+    }
+    .headline-eyebrow, .yield .lbl, .yield .note { color: var(--pp-ink-3) !important; }
+    .headline-eyebrow::before { background: var(--pp-ink-3) !important; }
+    .headline-value, .yield .val { color: var(--pp-ink) !important; }
+    .headline-value.positive { color: var(--pp-success) !important; }
+    .headline-value.negative { color: var(--pp-danger) !important; }
+    .yield { border-left-color: var(--pp-line) !important; }
+    .headline-sub { color: var(--pp-ink-3) !important; }
+    .panel { box-shadow: none; break-inside: avoid; }
+    .body-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="calc" role="application" aria-label="Pathway Property cashflow calculator">
+
+  <!-- ========================== HEADER ========================== -->
+  <header class="pp-head">
+    <div class="pp-brand">
+      <!-- Inline brand mark: rounded square with negative-space pathway curve.
+           Recreated from /assets/logo-mark.svg so the file stays self-contained. -->
+      <div class="pp-logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="7" fill="#1A5A57"/>
+          <path d="M28.5 28.2C28.74 28.04 28.9 27.77 28.9 27.46V4.2c0-.19-.05-.36-.15-.51C2.78 9.6 12 24.45 28.5 28.2Z" fill="#F3EFE6"/>
+          <path d="M27.3 3.7H4.05a.94.94 0 0 0-.94.94v23.25c0 .5.41.91.91.91h3.55C4.6 18.5 6.86 3.27 27.93 3.97c-.18-.17-.39-.27-.63-.27Z" fill="#F3EFE6"/>
+        </svg>
+      </div>
+      <div class="pp-wordmark">
+        <span class="name">Pathway Property</span>
+        <span class="role">Cashflow Calculator</span>
+      </div>
+    </div>
+
+    <div class="pp-actions">
+      <button class="btn" type="button" onclick="resetDefaults()" title="Restore all defaults">Reset</button>
+      <button class="btn" type="button" onclick="copyLink(event)" title="Copy a shareable URL with these inputs">Share Scenario</button>
+      <button class="btn primary" type="button" onclick="window.print()" title="Print or save as PDF">Print / PDF</button>
+    </div>
+  </header>
+
+  <!-- ========================== HEADLINE RESULT ========================== -->
+  <!-- Always visible above the fold. Net annual cashflow is the hero.
+       Yields sit beside it for context. Colour shifts positive/negative. -->
+  <div class="headline">
+    <div class="headline-eyebrow">CASHFLOW TOOL · POST-PURCHASE</div>
+    <div class="headline-top">
+      <div class="cashflows">
+        <div class="cf-lbl">Annual Cashflow</div>
+        <div class="headline-value" id="cfAnnual">$0</div>
+        <div class="cf-sub-row">
+          <div>
+            <div class="cf-lbl">Monthly</div>
+            <div class="cf-val" id="cfMonthly">$0</div>
+          </div>
+          <div>
+            <div class="cf-lbl">Weekly</div>
+            <div class="cf-val" id="cfWeekly">$0</div>
+          </div>
+        </div>
+        <div class="headline-sub">Net · after all costs · pre-tax</div>
+      </div>
+
+      <div class="yields">
+        <div class="yield">
+          <div class="lbl">Gross Yield</div>
+          <div class="val" id="grossYield">0.00%</div>
+          <div class="note">rent ÷ price</div>
+        </div>
+        <div class="yield">
+          <div class="lbl">Net Yield</div>
+          <div class="val" id="netYield">0.00%</div>
+          <div class="note">ex-finance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================== BODY ========================== -->
+  <div class="body-grid">
+
+    <!-- INPUTS PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-eyebrow">Scenario</div>
+        <div class="panel-title">Your <em>inputs</em></div>
+        <div class="panel-sub">AUD · annual unless noted</div>
+      </div>
+
+      <!-- Property & Finance -->
+      <div class="section">
+        <div class="section-label">Property &amp; Finance</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="purchasePrice">Purchase Price</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="purchasePrice" class="with-prefix" value="650000" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="lvr">Loan-to-Value Ratio</label>
+            <div class="input-wrap">
+              <input type="number" id="lvr" class="with-suffix" value="80" step="0.5" inputmode="decimal" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="financeRate">Finance Rate</label>
+            <div class="input-wrap">
+              <input type="number" id="financeRate" class="with-suffix" value="6.50" step="0.05" inputmode="decimal" />
+              <span class="input-suffix">% p.a.</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="loanTerm">Loan Term</label>
+            <div class="input-wrap">
+              <input type="number" id="loanTerm" class="with-suffix" value="30" inputmode="numeric" />
+              <span class="input-suffix">years</span>
+            </div>
+          </div>
+          <div class="field full">
+            <label>Finance Structure</label>
+            <div class="radio-group" role="radiogroup" aria-label="Finance structure">
+              <input type="radio" name="loanType" id="loanIO" value="IO" />
+              <label for="loanIO">Finance Only</label>
+              <input type="radio" name="loanType" id="loanPI" value="PI" checked />
+              <label for="loanPI">Principal &amp; Finance</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Income & Holding Costs -->
+      <div class="section">
+        <div class="section-label">Income &amp; Annual Holding Costs</div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="rentPerWeek">Rent Per Week</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="rentPerWeek" class="with-prefix" value="540" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="pmFee">Property Management Fee</label>
+            <div class="input-wrap">
+              <input type="number" id="pmFee" class="with-suffix" value="7" step="0.1" inputmode="decimal" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="ratesWater">Rates + Water</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="ratesWater" class="with-prefix" value="2800" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="insurance">Insurance <span class="hint">landlord + building</span></label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="insurance" class="with-prefix" value="1800" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="maintenance">Maintenance Buffer</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="maintenance" class="with-prefix" value="2000" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="landTax">Land Tax</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="landTax" class="with-prefix" value="0" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="field full">
+            <label for="strata">Body Corporate / Strata <span class="hint">if applicable</span></label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="strata" class="with-prefix" value="0" inputmode="numeric" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BREAKDOWNS PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-eyebrow">Working</div>
+        <div class="panel-title">The <em>numbers</em></div>
+        <div class="panel-sub">Estimates only · pre-tax</div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Finance Detail</div>
+        <div class="breakdown-rows">
+          <div class="breakdown-row"><span class="label">Loan Amount</span><span class="value" id="loanAmount">$0</span></div>
+          <div class="breakdown-row"><span class="label">Monthly Finance Repayment</span><span class="value" id="monthlyRepay">$0</span></div>
+          <div class="breakdown-row"><span class="label">Weekly Finance Repayment</span><span class="value" id="weeklyRepay">$0</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Income</div>
+        <div class="breakdown-rows">
+          <div class="breakdown-row"><span class="label">Gross Annual Rent</span><span class="value" id="grossRent">$0</span></div>
+          <div class="breakdown-row"><span class="label">Less: Property Management Fee</span><span class="value" id="pmCost">$0</span></div>
+          <div class="breakdown-row subtotal"><span class="label">Effective Rent</span><span class="value" id="effectiveRent">$0</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Expenses</div>
+        <div class="breakdown-rows">
+          <div class="breakdown-row"><span class="label">Annual Finance Cost</span><span class="value" id="loanCost">$0</span></div>
+          <div class="breakdown-row"><span class="label">Rates + Water</span><span class="value" id="ratesWaterOut">$0</span></div>
+          <div class="breakdown-row"><span class="label">Insurance</span><span class="value" id="insuranceOut">$0</span></div>
+          <div class="breakdown-row"><span class="label">Maintenance Buffer</span><span class="value" id="maintenanceOut">$0</span></div>
+          <div class="breakdown-row"><span class="label">Land Tax</span><span class="value" id="landTaxOut">$0</span></div>
+          <div class="breakdown-row"><span class="label">Body Corp / Strata</span><span class="value" id="strataOut">$0</span></div>
+          <div class="breakdown-row subtotal"><span class="label">Total Annual Costs</span><span class="value" id="totalCosts">$0</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="pp-foot">
+    <span>Pathway Property · Estimates only</span>
+    <em>Guiding your pathway to wealth.</em>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">Link copied to clipboard ✓</div>
+
+<script>
+  /* =====================================================================
+     LOGIC — carried over essentially unchanged from v2.
+     Do not edit the maths or URL-state code without a reason.
+     ===================================================================== */
+
+  // Formatting -------------------------------------------------------------
+  function fmt(n) {
+    const v = Number(n);
+    if (isNaN(v)) return '—';
+    const rounded = Math.round(v);
+    return (rounded < 0 ? '-$' : '$') + Math.abs(rounded).toLocaleString('en-AU');
+  }
+  function fmtPct(n) {
+    const v = Number(n);
+    if (isNaN(v) || !isFinite(v)) return '—';
+    return v.toFixed(2) + '%';
+  }
+
+  // P&I monthly repayment (amortising)
+  function pmt(principal, ratePA, years) {
+    if (years <= 0 || principal <= 0) return 0;
+    const r = ratePA / 12;
+    const n = years * 12;
+    if (r === 0) return principal / n;
+    return principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+  }
+
+  function get(id) { return parseFloat(document.getElementById(id).value) || 0; }
+  function loanType() {
+    return document.querySelector('input[name="loanType"]:checked').value;
+  }
+
+  // Core recalc — runs on every input event
+  function recalc() {
+    const price = get('purchasePrice');
+    const lvr = get('lvr') / 100;
+    const rate = get('financeRate') / 100;
+    const term = get('loanTerm');
+    const lt = loanType();
+
+    const rentPW = get('rentPerWeek');
+    const pmPct = get('pmFee') / 100;
+
+    const rates = get('ratesWater');
+    const ins = get('insurance');
+    const maint = get('maintenance');
+    const land = get('landTax');
+    const strata = get('strata');
+
+    // Loan
+    const loan = price * lvr;
+    const monthly = lt === 'IO' ? (loan * rate / 12) : pmt(loan, rate, term);
+    const weekly = monthly * 12 / 52;
+    const annualLoan = monthly * 12;
+
+    // Income
+    const grossRent = rentPW * 52;
+    const pmCost = grossRent * pmPct;
+    const effectiveRent = grossRent - pmCost;
+
+    // Expenses
+    const totalCosts = annualLoan + rates + ins + maint + land + strata;
+
+    // Bottom line
+    const netAnnual = effectiveRent - totalCosts;
+    const netMonthly = netAnnual / 12;
+    const netWeekly = netAnnual / 52;
+
+    // Yields
+    const grossYield = price > 0 ? (grossRent / price) * 100 : 0;
+    // Net yield — market-standard: rent less operating costs (PM fee, rates,
+    // insurance, maintenance, land tax, strata), EXCLUDING finance, over price.
+    // This is a property-level metric, independent of how the buyer funded it.
+    const opCosts = pmCost + rates + ins + maint + land + strata;
+    const netYield = price > 0 ? ((grossRent - opCosts) / price) * 100 : 0;
+
+    // Write outputs — headline cashflows (Annual / Monthly / Weekly)
+    const cfAnnualEl  = document.getElementById('cfAnnual');
+    const cfMonthlyEl = document.getElementById('cfMonthly');
+    const cfWeeklyEl  = document.getElementById('cfWeekly');
+    cfAnnualEl.textContent  = fmt(netAnnual);
+    cfMonthlyEl.textContent = fmt(netMonthly);
+    cfWeeklyEl.textContent  = fmt(netWeekly);
+    [cfAnnualEl, cfMonthlyEl, cfWeeklyEl].forEach(el => {
+      el.classList.toggle('positive', netAnnual >= 0);
+      el.classList.toggle('negative', netAnnual < 0);
+    });
+
+    document.getElementById('grossYield').textContent = fmtPct(grossYield);
+    document.getElementById('netYield').textContent = fmtPct(netYield);
+
+    document.getElementById('grossRent').textContent = fmt(grossRent);
+    document.getElementById('pmCost').textContent = '-' + fmt(pmCost);
+    document.getElementById('effectiveRent').textContent = fmt(effectiveRent);
+
+    document.getElementById('loanCost').textContent = fmt(annualLoan);
+    document.getElementById('ratesWaterOut').textContent = fmt(rates);
+    document.getElementById('insuranceOut').textContent = fmt(ins);
+    document.getElementById('maintenanceOut').textContent = fmt(maint);
+    document.getElementById('landTaxOut').textContent = fmt(land);
+    document.getElementById('strataOut').textContent = fmt(strata);
+    document.getElementById('totalCosts').textContent = fmt(totalCosts);
+
+    document.getElementById('loanAmount').textContent = fmt(loan);
+    document.getElementById('monthlyRepay').textContent = fmt(monthly);
+    document.getElementById('weeklyRepay').textContent = fmt(weekly);
+
+    syncURL();
+  }
+
+  // URL state — every input encoded as a query param so a shared link
+  // restores the exact scenario on open.
+  const FIELDS = ['purchasePrice', 'lvr', 'financeRate', 'loanTerm', 'rentPerWeek', 'pmFee', 'ratesWater', 'insurance', 'maintenance', 'landTax', 'strata'];
+
+  function syncURL() {
+    const params = new URLSearchParams();
+    FIELDS.forEach(f => {
+      const el = document.getElementById(f);
+      if (el && el.value) params.set(f, el.value);
+    });
+    params.set('lt', loanType());
+    // Use replaceState so we don't pollute browser history on every keystroke.
+    try { history.replaceState(null, '', '?' + params.toString()); } catch (e) { /* sandboxed iframe */ }
+  }
+
+  function loadFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.toString() === '') return;
+    FIELDS.forEach(f => {
+      if (params.has(f)) {
+        const el = document.getElementById(f);
+        if (el) el.value = params.get(f);
+      }
+    });
+    if (params.has('lt')) {
+      const lt = params.get('lt');
+      const el = document.getElementById(lt === 'IO' ? 'loanIO' : 'loanPI');
+      if (el) el.checked = true;
+    }
+  }
+
+  // Share Scenario — copy current URL with all inputs encoded.
+  function copyLink(ev) {
+    syncURL();
+    const url = window.location.href;
+    const showToast = () => {
+      const t = document.getElementById('toast');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1800);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(showToast).catch(fallback);
+    } else {
+      fallback();
+    }
+    function fallback() {
+      // Older browsers / non-secure context: synthesise a textarea + execCommand.
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast(); } catch (e) { /* swallow */ }
+      document.body.removeChild(ta);
+    }
+  }
+
+  // Restore defaults — single source of truth for default values.
+  function resetDefaults() {
+    if (!confirm('Reset all inputs to defaults?')) return;
+    document.getElementById('purchasePrice').value = 650000;
+    document.getElementById('lvr').value = 80;
+    document.getElementById('financeRate').value = 6.50;
+    document.getElementById('loanTerm').value = 30;
+    document.getElementById('loanPI').checked = true;
+    document.getElementById('rentPerWeek').value = 540;
+    document.getElementById('pmFee').value = 7;
+    document.getElementById('ratesWater').value = 2800;
+    document.getElementById('insurance').value = 1800;
+    document.getElementById('maintenance').value = 2000;
+    document.getElementById('landTax').value = 0;
+    document.getElementById('strata').value = 0;
+    try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+    recalc();
+  }
+
+  // Wire every input to live recalc.
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', recalc);
+    el.addEventListener('change', recalc);
+  });
+
+  // Init
+  loadFromURL();
+  recalc();
+</script>
+</body>
+</html>
