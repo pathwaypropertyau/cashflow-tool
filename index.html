@@ -275,10 +275,39 @@
     font-size: 13px;
     font-weight: 400;
     color: rgba(243, 239, 230, 0.72);
-    margin-top: 8px;
+    margin-top: 14px;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
   }
+
+  /* Cashflow trio — Annual (hero) + Monthly + Weekly. */
+  .cashflows { min-width: 0; }
+  .cf-lbl {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pp-teal-300);
+    margin-bottom: 6px;
+  }
+  .cf-sub-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 16px;
+  }
+  .cf-val {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--pp-pos-on-dark);
+    transition: color 200ms var(--ease-out);
+  }
+  .cf-val.positive { color: var(--pp-pos-on-dark); }
+  .cf-val.negative { color: rgb(244, 239, 230); }
 
   /* Inline yield chips on the right of the headline.
      Stacks below the cashflow value on narrow widths. */
@@ -704,9 +733,20 @@
   <div class="headline">
     <div class="headline-eyebrow">CASHFLOW TOOL · POST-PURCHASE</div>
     <div class="headline-top">
-      <div>
-        <div class="headline-value" id="netAnnual">$0</div>
-        <div class="headline-sub" id="netWeekly">$0 / week · pre-tax</div>
+      <div class="cashflows">
+        <div class="cf-lbl">Annual Cashflow</div>
+        <div class="headline-value" id="cfAnnual">$0</div>
+        <div class="cf-sub-row">
+          <div>
+            <div class="cf-lbl">Monthly</div>
+            <div class="cf-val" id="cfMonthly">$0</div>
+          </div>
+          <div>
+            <div class="cf-lbl">Weekly</div>
+            <div class="cf-val" id="cfWeekly">$0</div>
+          </div>
+        </div>
+        <div class="headline-sub">Net · after all costs · pre-tax</div>
       </div>
 
       <div class="yields">
@@ -718,7 +758,7 @@
         <div class="yield">
           <div class="lbl">Net Yield</div>
           <div class="val" id="netYield">0.00%</div>
-          <div class="note">pre-finance</div>
+          <div class="note">ex-finance</div>
         </div>
       </div>
     </div>
@@ -845,6 +885,15 @@
       </div>
 
       <div class="section">
+        <div class="section-label">Finance Detail</div>
+        <div class="breakdown-rows">
+          <div class="breakdown-row"><span class="label">Loan Amount</span><span class="value" id="loanAmount">$0</span></div>
+          <div class="breakdown-row"><span class="label">Monthly Finance Repayment</span><span class="value" id="monthlyRepay">$0</span></div>
+          <div class="breakdown-row"><span class="label">Weekly Finance Repayment</span><span class="value" id="weeklyRepay">$0</span></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="section-label">Income</div>
         <div class="breakdown-rows">
           <div class="breakdown-row"><span class="label">Gross Annual Rent</span><span class="value" id="grossRent">$0</span></div>
@@ -863,15 +912,6 @@
           <div class="breakdown-row"><span class="label">Land Tax</span><span class="value" id="landTaxOut">$0</span></div>
           <div class="breakdown-row"><span class="label">Body Corp / Strata</span><span class="value" id="strataOut">$0</span></div>
           <div class="breakdown-row subtotal"><span class="label">Total Annual Costs</span><span class="value" id="totalCosts">$0</span></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-label">Finance Detail</div>
-        <div class="breakdown-rows">
-          <div class="breakdown-row"><span class="label">Loan Amount</span><span class="value" id="loanAmount">$0</span></div>
-          <div class="breakdown-row"><span class="label">Monthly Repayment</span><span class="value" id="monthlyRepay">$0</span></div>
-          <div class="breakdown-row"><span class="label">Weekly Repayment</span><span class="value" id="weeklyRepay">$0</span></div>
         </div>
       </div>
     </div>
@@ -952,19 +992,28 @@
 
     // Bottom line
     const netAnnual = effectiveRent - totalCosts;
-    const netWeeklyCF = netAnnual / 52;
+    const netMonthly = netAnnual / 12;
+    const netWeekly = netAnnual / 52;
 
     // Yields
     const grossYield = price > 0 ? (grossRent / price) * 100 : 0;
-    const netYield = price > 0 ? ((effectiveRent - rates - ins - maint - land - strata) / price) * 100 : 0;
+    // Net yield — market-standard: rent less operating costs (PM fee, rates,
+    // insurance, maintenance, land tax, strata), EXCLUDING finance, over price.
+    // This is a property-level metric, independent of how the buyer funded it.
+    const opCosts = pmCost + rates + ins + maint + land + strata;
+    const netYield = price > 0 ? ((grossRent - opCosts) / price) * 100 : 0;
 
-    // Write outputs
-    const netAnnualEl = document.getElementById('netAnnual');
-    const netWeeklyEl = document.getElementById('netWeekly');
-    netAnnualEl.textContent = fmt(netAnnual);
-    netWeeklyEl.textContent = fmt(netWeeklyCF) + ' / week · pre-tax';
-    netAnnualEl.classList.toggle('positive', netAnnual >= 0);
-    netAnnualEl.classList.toggle('negative', netAnnual < 0);
+    // Write outputs — headline cashflows (Annual / Monthly / Weekly)
+    const cfAnnualEl  = document.getElementById('cfAnnual');
+    const cfMonthlyEl = document.getElementById('cfMonthly');
+    const cfWeeklyEl  = document.getElementById('cfWeekly');
+    cfAnnualEl.textContent  = fmt(netAnnual);
+    cfMonthlyEl.textContent = fmt(netMonthly);
+    cfWeeklyEl.textContent  = fmt(netWeekly);
+    [cfAnnualEl, cfMonthlyEl, cfWeeklyEl].forEach(el => {
+      el.classList.toggle('positive', netAnnual >= 0);
+      el.classList.toggle('negative', netAnnual < 0);
+    });
 
     document.getElementById('grossYield').textContent = fmtPct(grossYield);
     document.getElementById('netYield').textContent = fmtPct(netYield);
