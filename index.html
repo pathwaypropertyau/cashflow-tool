@@ -215,18 +215,10 @@
       linear-gradient(135deg, #0F3E3A 0%, #0B3A3A 60%, #0F4543 100%);
     color: var(--pp-cream);
     border-radius: 16px;
-    padding: 22px 26px 24px;
-    margin-bottom: 18px;
+    padding: 18px 24px 20px;
+    margin-bottom: 16px;
     position: relative;
     overflow: hidden;
-  }
-  /* A thin hairline under the texture, to echo the brand's editorial rules. */
-  .headline::after {
-    content: '';
-    position: absolute;
-    left: 26px; right: 26px; bottom: 60px;
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(243, 239, 230, 0.12), transparent);
   }
 
   .headline-top {
@@ -275,13 +267,13 @@
     font-size: 13px;
     font-weight: 400;
     color: rgba(243, 239, 230, 0.72);
-    margin-top: 14px;
+    margin-top: 8px;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
   }
 
-  /* Cashflow trio — Annual (hero) + Monthly + Weekly. */
-  .cashflows { min-width: 0; }
+  /* Hero (Annual cashflow) on the left. */
+  .cf-hero { min-width: 0; }
   .cf-lbl {
     font-family: var(--font-display);
     font-size: 10.5px;
@@ -290,11 +282,6 @@
     text-transform: uppercase;
     color: var(--pp-teal-300);
     margin-bottom: 6px;
-  }
-  .cf-sub-row {
-    display: flex;
-    gap: 32px;
-    margin-top: 16px;
   }
   .cf-val {
     font-family: var(--font-display);
@@ -309,20 +296,19 @@
   .cf-val.positive { color: var(--pp-pos-on-dark); }
   .cf-val.negative { color: rgb(244, 239, 230); }
 
-  /* Inline yield chips on the right of the headline.
-     Stacks below the cashflow value on narrow widths. */
-  .yields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    min-width: 220px;
+  /* Compact stat strip on the right: Monthly · Weekly · Gross · Net.
+     One baseline-aligned row keeps the header short. Wraps on narrow widths. */
+  .metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
     align-self: flex-end;
   }
-  .yield {
+  .metric {
     border-left: 1px solid rgba(243, 239, 230, 0.18);
-    padding: 2px 0 2px 14px;
+    padding: 0 0 0 16px;
   }
-  .yield .lbl {
+  .metric .lbl {
     font-family: var(--font-display);
     font-size: 10px;
     font-weight: 600;
@@ -332,7 +318,7 @@
     margin-bottom: 6px;
     white-space: nowrap;
   }
-  .yield .val {
+  .metric .val {
     font-family: var(--font-display);
     font-size: 22px;
     font-weight: 600;
@@ -341,7 +327,7 @@
     letter-spacing: -0.01em;
     line-height: 1;
   }
-  .yield .note {
+  .metric .note {
     font-family: var(--font-mono);
     font-size: 10.5px;
     color: rgba(243, 239, 230, 0.55);
@@ -733,29 +719,29 @@
   <div class="headline">
     <div class="headline-eyebrow">CASHFLOW TOOL · POST-PURCHASE</div>
     <div class="headline-top">
-      <div class="cashflows">
+      <div class="cf-hero">
         <div class="cf-lbl">Annual Cashflow</div>
         <div class="headline-value" id="cfAnnual">$0</div>
-        <div class="cf-sub-row">
-          <div>
-            <div class="cf-lbl">Monthly</div>
-            <div class="cf-val" id="cfMonthly">$0</div>
-          </div>
-          <div>
-            <div class="cf-lbl">Weekly</div>
-            <div class="cf-val" id="cfWeekly">$0</div>
-          </div>
-        </div>
         <div class="headline-sub">Net · after all costs · pre-tax</div>
       </div>
 
-      <div class="yields">
-        <div class="yield">
+      <div class="metrics">
+        <div class="metric">
+          <div class="lbl">Monthly</div>
+          <div class="cf-val" id="cfMonthly">$0</div>
+          <div class="note">cashflow</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">Weekly</div>
+          <div class="cf-val" id="cfWeekly">$0</div>
+          <div class="note">cashflow</div>
+        </div>
+        <div class="metric">
           <div class="lbl">Gross Yield</div>
           <div class="val" id="grossYield">0.00%</div>
           <div class="note">rent ÷ price</div>
         </div>
-        <div class="yield">
+        <div class="metric">
           <div class="lbl">Net Yield</div>
           <div class="val" id="netYield">0.00%</div>
           <div class="note">ex-finance</div>
